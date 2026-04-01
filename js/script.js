@@ -64,7 +64,10 @@
         pickAudioBtn: $("pickAudioBtn"),
         pickImageBtn: $("pickImageBtn"),
         pickImageBtnPanel: $("pickImageBtnPanel"),
+        pickImageBtnVisual: $("pickImageBtnVisual"),
         clearImageBtn: $("clearImageBtn"),
+        imageFit: $("imageFit"),
+        visualEmpty: $("visualEmpty"),
         fullscreenBtn: $("fullscreenBtn"),
 
         playPauseBtn: $("playPauseBtn"),
@@ -329,6 +332,19 @@
         }
     }
 
+    function applyImageFit() {
+        if (!els.visual) return;
+        var mode = els.imageFit && els.imageFit.value === "contain" ? "contain" : "cover";
+        els.visual.classList.toggle("image-fit-contain", mode === "contain");
+        if (els.visualImage) els.visualImage.style.objectFit = mode;
+    }
+
+    function syncImageEmptyState() {
+        if (!els.visualEmpty) return;
+        var has = els.visual && els.visual.classList.contains("has-image");
+        els.visualEmpty.setAttribute("aria-hidden", has ? "true" : "false");
+    }
+
     function setImageFromFile(file) {
         if (!file || !els.visualImage || !els.visual) return;
         revokeImageUrl();
@@ -337,6 +353,8 @@
         els.visualImage.classList.remove("visual__image--empty");
         els.visual.classList.add("has-image");
         if (els.clearImageBtn) els.clearImageBtn.disabled = false;
+        applyImageFit();
+        syncImageEmptyState();
     }
 
     function clearImage() {
@@ -347,6 +365,7 @@
         els.visual.classList.remove("has-image");
         if (els.clearImageBtn) els.clearImageBtn.disabled = true;
         if (els.imageInput) els.imageInput.value = "";
+        syncImageEmptyState();
     }
 
     function setGradientVars() {
@@ -370,6 +389,15 @@
     }
     if (els.pickImageBtn) els.pickImageBtn.addEventListener("click", openImagePicker);
     if (els.pickImageBtnPanel) els.pickImageBtnPanel.addEventListener("click", openImagePicker);
+    if (els.pickImageBtnVisual) els.pickImageBtnVisual.addEventListener("click", openImagePicker);
+    if (els.visualEmpty) {
+        els.visualEmpty.addEventListener("click", function (e) {
+            if (els.visual && els.visual.classList.contains("has-image")) return;
+            if (e.target && e.target.closest && e.target.closest("button")) return;
+            openImagePicker();
+        });
+    }
+    if (els.imageFit) els.imageFit.addEventListener("change", applyImageFit);
     if (els.clearImageBtn) {
         els.clearImageBtn.addEventListener("click", clearImage);
     }
@@ -540,5 +568,7 @@
     setPlayUI(false);
     setCssVars(0, 0, 0, 0);
     setGradientVars();
+    applyImageFit();
+    syncImageEmptyState();
     syncFullscreenUI();
 })();

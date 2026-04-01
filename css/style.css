@@ -107,6 +107,44 @@ body{
     transform-style: preserve-3d;
 }
 
+/* Dedicated upload / empty state (hidden once an image replaces it) */
+.visual__empty{
+    position:absolute;
+    inset:0;
+    z-index:2;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    text-align:center;
+    pointer-events:auto;
+    background:
+        radial-gradient(ellipse at 50% 40%, rgba(108,240,255,.08), transparent 55%),
+        linear-gradient(180deg, rgba(0,0,0,.22), rgba(0,0,0,.38));
+    border:2px dashed rgba(255,255,255,.18);
+    border-radius:18px;
+    margin:10px;
+    cursor:pointer;
+}
+.visual.has-image .visual__empty{
+    display:none;
+}
+.visual__empty-inner{max-width:320px}
+.visual__empty-title{
+    display:block;
+    font-size:14px;
+    font-weight:650;
+    letter-spacing:.3px;
+    margin-bottom:8px;
+    color:var(--text);
+}
+.visual__empty-text{
+    margin:0 0 14px;
+    font-size:13px;
+    line-height:1.45;
+    color:var(--muted);
+}
+
 .visual__stage{
     position:absolute;
     inset:0;
@@ -123,13 +161,20 @@ body{
     width:100%;
     height:100%;
     object-fit:cover;
+    object-position:center;
     display:block;
     z-index:0;
     pointer-events:none;
 }
+.visual.image-fit-contain .visual__image{
+    object-fit:contain;
+}
 .visual__image--empty{
     opacity:0;
     visibility:hidden;
+}
+.visual.image-fit-contain .visual__stage{
+    background: rgba(6,8,18,.85);
 }
 
 .visual__surface{
@@ -179,8 +224,19 @@ body{
 .fs-controls__spacer{flex:1}
 .fs-controls__time{color:var(--muted); font-size:12px}
 
-.visual.is-fullscreen{
+.visual.is-fullscreen,
+.visual:fullscreen,
+.visual:-webkit-full-screen{
     border-radius:0;
+    min-height:100vh;
+    min-height:100dvh;
+    width:100%;
+    height:100%;
+}
+.visual:fullscreen .visual__stage,
+.visual:-webkit-full-screen .visual__stage,
+.visual.is-fullscreen .visual__stage{
+    min-height:100%;
 }
 .visual.is-fullscreen .fs-controls{
     display:flex;
@@ -338,6 +394,26 @@ body{
 }
 .field__label{font-size:12px; color:var(--muted)}
 .field__range{width:100%; accent-color: var(--accent2)}
+.field__file{
+    width:100%;
+    padding:10px 12px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.14);
+    background: rgba(0,0,0,.2);
+    color:var(--muted);
+    font-size:12px;
+    cursor:pointer;
+}
+.field__select{
+    width:100%;
+    padding:10px 12px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.14);
+    background: rgba(0,0,0,.2);
+    color:var(--text);
+    font-size:12px;
+    cursor:pointer;
+}
 .field__color{
     width:44px;
     height:34px;

@@ -22,7 +22,6 @@
 
                     <div class="file-actions">
                         <input class="sr-only" type="file" id="audioInput" accept="audio/*">
-                        <input class="sr-only" type="file" id="imageInput" accept="image/*">
                         <button class="btn btn--ghost" id="pickAudioBtn" type="button">Choose audio</button>
                         <button class="btn btn--ghost" id="pickImageBtn" type="button">Choose image</button>
                         <button class="btn btn--ghost" id="fullscreenBtn" type="button">Fullscreen</button>
@@ -31,8 +30,16 @@
 
                 <div class="player__content">
                     <div class="visual" id="visual" aria-label="Bass visualizer">
+                        <div class="visual__empty" id="visualEmpty" aria-hidden="false">
+                            <div class="visual__empty-inner">
+                                <span class="visual__empty-title">Image</span>
+                                <p class="visual__empty-text">Choose a file or drag an image into this area. It appears behind the bass gradient.</p>
+                                <button class="btn btn--primary" type="button" id="pickImageBtnVisual">Choose image file…</button>
+                            </div>
+                        </div>
+
                         <div class="visual__stage" id="visualStage">
-                            <img id="visualImage" class="visual__image visual__image--empty" alt="">
+                            <img id="visualImage" class="visual__image visual__image--empty" alt="Uploaded artwork">
                             <div class="visual__surface" id="visualSurface" aria-hidden="true"></div>
                             <div class="visual__glow" aria-hidden="true"></div>
                         </div>
@@ -96,10 +103,21 @@
                             <summary class="advanced__summary">Visualizer</summary>
                             <div class="advanced__body">
                                 <div class="group">
-                                    <div class="group__title">Image (optional)</div>
-                                    <p class="group__hint">Add a photo under the bass gradient — it animates together with the visualizer.</p>
+                                    <div class="group__title">Image</div>
+                                    <p class="group__hint">Upload displays in the main visual area (under the gradient). Use Cover to fill the frame or Contain to show the whole image.</p>
+                                    <label class="field">
+                                        <span class="field__label">Image file</span>
+                                        <input class="field__file" id="imageInput" type="file" accept="image/*">
+                                    </label>
+                                    <label class="field">
+                                        <span class="field__label">Scale</span>
+                                        <select class="field__select" id="imageFit" aria-label="Image scaling">
+                                            <option value="cover" selected>Cover — fill frame, crop if needed</option>
+                                            <option value="contain">Contain — show full image, may letterbox</option>
+                                        </select>
+                                    </label>
                                     <div class="group__row">
-                                        <button class="btn btn--ghost" id="pickImageBtnPanel" type="button">Choose image</button>
+                                        <button class="btn btn--ghost" id="pickImageBtnPanel" type="button">Choose image…</button>
                                         <button class="btn btn--ghost" id="clearImageBtn" type="button" disabled>Remove image</button>
                                     </div>
                                 </div>
