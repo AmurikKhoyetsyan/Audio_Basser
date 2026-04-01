@@ -25,19 +25,31 @@
                         <input class="sr-only" type="file" id="imageInput" accept="image/*">
                         <button class="btn btn--ghost" id="pickAudioBtn" type="button">Choose audio</button>
                         <button class="btn btn--ghost" id="pickImageBtn" type="button">Choose image</button>
+                        <button class="btn btn--ghost" id="fullscreenBtn" type="button">Fullscreen</button>
                     </div>
                 </header>
 
                 <div class="player__content">
-                    <div class="artwork" id="artwork" role="img" aria-label="Visualizer artwork">
-                        <img
-                                id="artworkImage"
-                                class="artwork__image"
-                                src="./img/IMG_20240403_214609.jpg"
-                                alt="Selected artwork"
-                                draggable="false"
-                        >
-                        <div class="artwork__glow" aria-hidden="true"></div>
+                    <div class="visual" id="visual" aria-label="Bass visualizer">
+                        <div class="visual__stage" id="visualStage">
+                            <img id="visualImage" class="visual__image visual__image--empty" alt="">
+                            <div class="visual__surface" id="visualSurface" aria-hidden="true"></div>
+                            <div class="visual__glow" aria-hidden="true"></div>
+                        </div>
+
+                        <div class="fs-controls" id="fsControls" aria-label="Fullscreen controls">
+                            <button class="btn btn--primary" id="fsPlayPauseBtn" type="button" disabled>
+                                <span class="btn__icon" aria-hidden="true">▶</span>
+                                <span class="btn__label" id="fsPlayPauseLabel">Play</span>
+                            </button>
+                            <button class="btn" id="fsExitBtn" type="button">Exit</button>
+                            <div class="fs-controls__spacer"></div>
+                            <div class="fs-controls__time">
+                                <span id="fsTimeCurrent">0:00</span>
+                                <span class="seek__sep">/</span>
+                                <span id="fsTimeTotal">0:00</span>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="panel">
@@ -83,6 +95,33 @@
                         <details class="advanced">
                             <summary class="advanced__summary">Visualizer</summary>
                             <div class="advanced__body">
+                                <div class="group">
+                                    <div class="group__title">Image (optional)</div>
+                                    <p class="group__hint">Add a photo under the bass gradient — it animates together with the visualizer.</p>
+                                    <div class="group__row">
+                                        <button class="btn btn--ghost" id="pickImageBtnPanel" type="button">Choose image</button>
+                                        <button class="btn btn--ghost" id="clearImageBtn" type="button" disabled>Remove image</button>
+                                    </div>
+                                </div>
+                                <div class="group">
+                                    <div class="group__title">Bass gradient</div>
+                                    <label class="field field--row">
+                                        <span class="field__label">Color A</span>
+                                        <input class="field__color" id="gradColorA" type="color" value="#6cf0ff">
+                                    </label>
+                                    <label class="field field--row">
+                                        <span class="field__label">Color B</span>
+                                        <input class="field__color" id="gradColorB" type="color" value="#ff4fd8">
+                                    </label>
+                                    <label class="field">
+                                        <span class="field__label">Angle</span>
+                                        <input class="field__range" id="gradAngle" type="range" min="0" max="360" value="45" step="1">
+                                    </label>
+                                    <label class="field">
+                                        <span class="field__label">Intensity</span>
+                                        <input class="field__range" id="gradIntensity" type="range" min="0" max="1" value="0.7" step="0.01">
+                                    </label>
+                                </div>
                                 <label class="field">
                                     <span class="field__label">Bass sensitivity</span>
                                     <input class="field__range" id="sensitivityRange" type="range" min="0.5" max="2.5"

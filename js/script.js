@@ -63,6 +63,10 @@
         imageInput: $("imageInput"),
         pickAudioBtn: $("pickAudioBtn"),
         pickImageBtn: $("pickImageBtn"),
+        pickImageBtnPanel: $("pickImageBtnPanel"),
+        clearImageBtn: $("clearImageBtn"),
+        fullscreenBtn: $("fullscreenBtn"),
+
         playPauseBtn: $("playPauseBtn"),
         playPauseLabel: $("playPauseLabel"),
         stopBtn: $("stopBtn"),
@@ -70,16 +74,31 @@
         timeCurrent: $("timeCurrent"),
         timeTotal: $("timeTotal"),
         volumeRange: $("volumeRange"),
+
         sensitivityRange: $("sensitivityRange"),
         smoothingRange: $("smoothingRange"),
-        artwork: $("artwork"),
-        artworkImage: $("artworkImage"),
+
+        gradColorA: $("gradColorA"),
+        gradColorB: $("gradColorB"),
+        gradAngle: $("gradAngle"),
+        gradIntensity: $("gradIntensity"),
+
+        visual: $("visual"),
+        visualImage: $("visualImage"),
+        visualSurface: $("visualSurface"),
+        fsControls: $("fsControls"),
+        fsPlayPauseBtn: $("fsPlayPauseBtn"),
+        fsPlayPauseLabel: $("fsPlayPauseLabel"),
+        fsExitBtn: $("fsExitBtn"),
+        fsTimeCurrent: $("fsTimeCurrent"),
+        fsTimeTotal: $("fsTimeTotal"),
+
         trackTitle: $("trackTitle"),
         trackSubtitle: $("trackSubtitle"),
     };
 
     // If the expected UI isn't present, do nothing.
-    if (!els.audio || !els.playPauseBtn || !els.artworkImage) return;
+    if (!els.audio || !els.playPauseBtn || !els.visual) return;
 
     // Apply THEME into CSS variables (single place to change colors).
     (function applyTheme() {
@@ -252,12 +271,17 @@
     function setButtonsEnabled(canPlay) {
         els.playPauseBtn.disabled = !canPlay;
         if (els.stopBtn) els.stopBtn.disabled = !canPlay;
+        if (els.fsPlayPauseBtn) els.fsPlayPauseBtn.disabled = !canPlay;
     }
 
     function setPlayUI(isPlaying) {
-        var icon = els.playPauseBtn.querySelector(".btn__icon");
+        var icon = els.playPauseBtn && els.playPauseBtn.querySelector(".btn__icon");
         if (icon) icon.textContent = isPlaying ? "⏸" : "▶";
         if (els.playPauseLabel) els.playPauseLabel.textContent = isPlaying ? "Pause" : "Play";
+
+        var fsIcon = els.fsPlayPauseBtn && els.fsPlayPauseBtn.querySelector(".btn__icon");
+        if (fsIcon) fsIcon.textContent = isPlaying ? "⏸" : "▶";
+        if (els.fsPlayPauseLabel) els.fsPlayPauseLabel.textContent = isPlaying ? "Pause" : "Play";
     }
 
     function setNowPlaying(name) {
@@ -269,6 +293,8 @@
     function updateTimes() {
         if (els.timeCurrent) els.timeCurrent.textContent = fmtTime(els.audio.currentTime);
         if (els.timeTotal) els.timeTotal.textContent = fmtTime(els.audio.duration);
+        if (els.fsTimeCurrent) els.fsTimeCurrent.textContent = fmtTime(els.audio.currentTime);
+        if (els.fsTimeTotal) els.fsTimeTotal.textContent = fmtTime(els.audio.duration);
     }
 
     function updateSeekFromAudio() {
@@ -293,9 +319,42 @@
         updateSeekFromAudio();
     }
 
+    /** @type {string|null} */
+    var imageObjectUrl = null;
+
+    function revokeImageUrl() {
+        if (imageObjectUrl) {
+            URL.revokeObjectURL(imageObjectUrl);
+            imageObjectUrl = null;
+        }
+    }
+
     function setImageFromFile(file) {
-        var url = URL.createObjectURL(file);
-        els.artworkImage.src = url;
+        if (!file || !els.visualImage || !els.visual) return;
+        revokeImageUrl();
+        imageObjectUrl = URL.createObjectURL(file);
+        els.visualImage.src = imageObjectUrl;
+        els.visualImage.classList.remove("visual__image--empty");
+        els.visual.classList.add("has-image");
+        if (els.clearImageBtn) els.clearImageBtn.disabled = false;
+    }
+
+    function clearImage() {
+        if (!els.visualImage || !els.visual) return;
+        revokeImageUrl();
+        els.visualImage.removeAttribute("src");
+        els.visualImage.classList.add("visual__image--empty");
+        els.visual.classList.remove("has-image");
+        if (els.clearImageBtn) els.clearImageBtn.disabled = true;
+        if (els.imageInput) els.imageInput.value = "";
+    }
+
+    function setGradientVars() {
+        var root = document.documentElement.style;
+        if (els.gradColorA && els.gradColorA.value) root.setProperty("--gradA", els.gradColorA.value);
+        if (els.gradColorB && els.gradColorB.value) root.setProperty("--gradB", els.gradColorB.value);
+        if (els.gradAngle) root.setProperty("--gradAngle", String(Number(els.gradAngle.value) || 0) + "deg");
+        if (els.gradIntensity) root.setProperty("--gradIntensity", String(clamp(Number(els.gradIntensity.value), 0, 1)));
     }
 
     // ============================================================
@@ -306,12 +365,21 @@
             els.audioInput.click();
         });
     }
-    if (els.pickImageBtn && els.imageInput) {
-        els.pickImageBtn.addEventListener("click", function () {
-            els.imageInput.click();
+    function openImagePicker() {
+        if (els.imageInput) els.imageInput.click();
+    }
+    if (els.pickImageBtn) els.pickImageBtn.addEventListener("click", openImagePicker);
+    if (els.pickImageBtnPanel) els.pickImageBtnPanel.addEventListener("click", openImagePicker);
+    if (els.clearImageBtn) {
+        els.clearImageBtn.addEventListener("click", clearImage);
+    }
+    if (els.imageInput) {
+        els.imageInput.addEventListener("change", function () {
+            var file = els.imageInput.files && els.imageInput.files[0];
+            if (!file) return;
+            setImageFromFile(file);
         });
     }
-
     if (els.audioInput) {
         els.audioInput.addEventListener("change", function () {
             var file = els.audioInput.files && els.audioInput.files[0];
@@ -320,28 +388,24 @@
         });
     }
 
-    if (els.imageInput) {
-        els.imageInput.addEventListener("change", function () {
-            var file = els.imageInput.files && els.imageInput.files[0];
-            if (!file) return;
-            setImageFromFile(file);
-        });
-    }
+    if (els.gradColorA) els.gradColorA.addEventListener("input", setGradientVars);
+    if (els.gradColorB) els.gradColorB.addEventListener("input", setGradientVars);
+    if (els.gradAngle) els.gradAngle.addEventListener("input", setGradientVars);
+    if (els.gradIntensity) els.gradIntensity.addEventListener("input", setGradientVars);
 
-    els.playPauseBtn.addEventListener("click", function () {
+    function togglePlayPause() {
         if (!els.audio.src) return;
-
         resumeAudioContext().then(function () {
             if (els.audio.paused || els.audio.ended) {
                 els.audio.play();
-                setPlayUI(true);
-                startTick();
             } else {
                 els.audio.pause();
-                setPlayUI(false);
             }
         });
-    });
+    }
+
+    els.playPauseBtn.addEventListener("click", togglePlayPause);
+    if (els.fsPlayPauseBtn) els.fsPlayPauseBtn.addEventListener("click", togglePlayPause);
 
     if (els.stopBtn) {
         els.stopBtn.addEventListener("click", function () {
@@ -353,6 +417,35 @@
             stopTickSmooth();
         });
     }
+
+    // Fullscreen controls (visual container)
+    function isFullscreen() {
+        return !!document.fullscreenElement;
+    }
+
+    function syncFullscreenUI() {
+        if (!els.visual) return;
+        els.visual.classList.toggle("is-fullscreen", isFullscreen());
+        if (els.fullscreenBtn) els.fullscreenBtn.textContent = isFullscreen() ? "Exit fullscreen" : "Fullscreen";
+    }
+
+    function enterFullscreen() {
+        if (!els.visual) return;
+        if (els.visual.requestFullscreen) els.visual.requestFullscreen();
+    }
+
+    function exitFullscreen() {
+        if (document.exitFullscreen) document.exitFullscreen();
+    }
+
+    function toggleFullscreen() {
+        if (isFullscreen()) exitFullscreen();
+        else enterFullscreen();
+    }
+
+    if (els.fullscreenBtn) els.fullscreenBtn.addEventListener("click", toggleFullscreen);
+    if (els.fsExitBtn) els.fsExitBtn.addEventListener("click", exitFullscreen);
+    document.addEventListener("fullscreenchange", syncFullscreenUI);
 
     if (els.seekRange) {
         els.seekRange.addEventListener("pointerdown", function () {
@@ -370,6 +463,15 @@
         });
     }
 
+    // Keyboard: Spacebar toggles play/pause (unless typing in inputs)
+    document.addEventListener("keydown", function (e) {
+        if (e.code !== "Space") return;
+        var tag = (e.target && e.target.tagName) ? String(e.target.tagName).toLowerCase() : "";
+        if (tag === "input" || tag === "textarea" || tag === "select" || (e.target && e.target.isContentEditable)) return;
+        e.preventDefault();
+        togglePlayPause();
+    });
+
     if (els.volumeRange) {
         els.volumeRange.addEventListener("input", function () {
             els.audio.volume = clamp(Number(els.volumeRange.value), 0, 1);
@@ -386,7 +488,7 @@
         els.sensitivityRange.value = String(VIS.sensitivityDefault);
     }
 
-    // Drag & drop: drop audio anywhere, drop image on artwork
+    // Drag & drop: drop audio anywhere
     function prevent(e) {
         e.preventDefault();
     }
@@ -397,14 +499,16 @@
         var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
         if (!file) return;
         if (file.type && file.type.indexOf("audio/") === 0) setAudioFromFile(file);
+        else if (file.type && file.type.indexOf("image/") === 0) setImageFromFile(file);
     });
-    if (els.artwork) {
-        els.artwork.addEventListener("dragover", prevent);
-        els.artwork.addEventListener("drop", function (e) {
-            e.preventDefault();
+    if (els.visual) {
+        els.visual.addEventListener("dragover", prevent);
+        els.visual.addEventListener("drop", function (e) {
+            e.stopPropagation();
             var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
             if (!file) return;
             if (file.type && file.type.indexOf("image/") === 0) setImageFromFile(file);
+            else if (file.type && file.type.indexOf("audio/") === 0) setAudioFromFile(file);
         });
     }
 
@@ -435,4 +539,6 @@
     setButtonsEnabled(false);
     setPlayUI(false);
     setCssVars(0, 0, 0, 0);
+    setGradientVars();
+    syncFullscreenUI();
 })();
