@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport"
+              content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+        <meta http-equiv="X-UA-Compatible" content="ie=edge">
+        <title>Audio Basser</title>
+        <link rel="stylesheet" href="./css/style.css" type="text/css">
+    </head>
+    <body>
+        <main class="app" id="app">
+            <section class="player" aria-label="Music player">
+                <header class="player__header">
+                    <div class="brand">
+                        <div class="brand__dot" aria-hidden="true"></div>
+                        <div class="brand__text">
+                            <div class="brand__title">Audio Basser</div>
+                            <div class="brand__subtitle">Bass‑synced visualizer</div>
+                        </div>
+                    </div>
+
+                    <div class="file-actions">
+                        <input class="sr-only" type="file" id="audioInput" accept="audio/*">
+                        <input class="sr-only" type="file" id="imageInput" accept="image/*">
+                        <button class="btn btn--ghost" id="pickAudioBtn" type="button">Choose audio</button>
+                        <button class="btn btn--ghost" id="pickImageBtn" type="button">Choose image</button>
+                    </div>
+                </header>
+
+                <div class="player__content">
+                    <div class="artwork" id="artwork" role="img" aria-label="Visualizer artwork">
+                        <img
+                                id="artworkImage"
+                                class="artwork__image"
+                                src="./img/IMG_20240403_214609.jpg"
+                                alt="Selected artwork"
+                                draggable="false"
+                        >
+                        <div class="artwork__glow" aria-hidden="true"></div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="meta">
+                            <div class="meta__title" id="trackTitle">No track loaded</div>
+                            <div class="meta__subtitle" id="trackSubtitle">Upload an audio file to start</div>
+                        </div>
+
+                        <div class="seek">
+                            <input
+                                    class="seek__range"
+                                    id="seekRange"
+                                    type="range"
+                                    min="0"
+                                    max="1000"
+                                    value="0"
+                                    step="1"
+                                    aria-label="Seek"
+                            >
+                            <div class="seek__time">
+                                <span id="timeCurrent">0:00</span>
+                                <span class="seek__sep">/</span>
+                                <span id="timeTotal">0:00</span>
+                            </div>
+                        </div>
+
+                        <div class="controls">
+                            <button class="btn btn--primary" id="playPauseBtn" type="button" disabled>
+                                <span class="btn__icon" aria-hidden="true">▶</span>
+                                <span class="btn__label" id="playPauseLabel">Play</span>
+                            </button>
+
+                            <button class="btn" id="stopBtn" type="button" disabled>Stop</button>
+
+                            <div class="controls__spacer"></div>
+
+                            <label class="vol" aria-label="Volume">
+                                <span class="vol__label">Vol</span>
+                                <input class="vol__range" id="volumeRange" type="range" min="0" max="1" value="1" step="0.01">
+                            </label>
+                        </div>
+
+                        <details class="advanced">
+                            <summary class="advanced__summary">Visualizer</summary>
+                            <div class="advanced__body">
+                                <label class="field">
+                                    <span class="field__label">Bass sensitivity</span>
+                                    <input class="field__range" id="sensitivityRange" type="range" min="0.5" max="2.5"
+                                           value="1.4" step="0.01">
+                                </label>
+                                <label class="field">
+                                    <span class="field__label">Smoothing</span>
+                                    <input class="field__range" id="smoothingRange" type="range" min="0" max="0.95" value="0.75"
+                                           step="0.01">
+                                </label>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <audio id="audio" crossorigin="anonymous"></audio>
+        <script src="./js/script.js" type="text/javascript"></script>
+    </body>
+</html>
