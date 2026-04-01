@@ -2,4 +2,4 @@
 ### Bass‑synced visualizer
 
 
-### [DEMO](https://audio-basser.vercel.app/)
+### [DEMO](https://amurikkhoyetsyan.github.io/Audio_Basser/)
