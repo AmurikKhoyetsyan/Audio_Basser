@@ -44,6 +44,8 @@
                             <div class="visual__glow" aria-hidden="true"></div>
                         </div>
 
+                        <canvas class="visual__eq" id="eqCanvas" aria-hidden="true" width="300" height="300"></canvas>
+
                         <div class="fs-controls" id="fsControls" aria-label="Fullscreen controls">
                             <button class="btn btn--primary" id="fsPlayPauseBtn" type="button" disabled>
                                 <span class="btn__icon" aria-hidden="true">▶</span>
@@ -122,23 +124,60 @@
                                     </div>
                                 </div>
                                 <div class="group">
-                                    <div class="group__title">Bass gradient</div>
-                                    <label class="field field--row">
-                                        <span class="field__label">Color A</span>
-                                        <input class="field__color" id="gradColorA" type="color" value="#6cf0ff">
+                                    <div class="group__title">Gradient overlay (RGBA)</div>
+                                    <label class="field field--inline">
+                                        <input type="checkbox" id="gradientEnabled" checked>
+                                        <span class="field__label">Enable gradient overlay</span>
                                     </label>
-                                    <label class="field field--row">
-                                        <span class="field__label">Color B</span>
-                                        <input class="field__color" id="gradColorB" type="color" value="#ff4fd8">
+                                    <div class="field field--split">
+                                        <label class="field">
+                                            <span class="field__label">Color A</span>
+                                            <input class="field__color" id="gradColorA" type="color" value="#6cf0ff">
+                                        </label>
+                                        <label class="field">
+                                            <span class="field__label">Alpha A</span>
+                                            <input class="field__range" id="gradAlphaA" type="range" min="0" max="1" value="0.75" step="0.01">
+                                        </label>
+                                    </div>
+                                    <div class="field field--split">
+                                        <label class="field">
+                                            <span class="field__label">Color B</span>
+                                            <input class="field__color" id="gradColorB" type="color" value="#ff4fd8">
+                                        </label>
+                                        <label class="field">
+                                            <span class="field__label">Alpha B</span>
+                                            <input class="field__range" id="gradAlphaB" type="range" min="0" max="1" value="0.65" step="0.01">
+                                        </label>
+                                    </div>
+                                    <label class="field">
+                                        <span class="field__label">Blend strength</span>
+                                        <input class="field__range" id="gradIntensity" type="range" min="0" max="1" value="1" step="0.01">
                                     </label>
                                     <label class="field">
                                         <span class="field__label">Angle</span>
                                         <input class="field__range" id="gradAngle" type="range" min="0" max="360" value="45" step="1">
                                     </label>
-                                    <label class="field">
-                                        <span class="field__label">Intensity</span>
-                                        <input class="field__range" id="gradIntensity" type="range" min="0" max="1" value="0.7" step="0.01">
+                                </div>
+                                <div class="group">
+                                    <div class="group__title">Circular equalizer</div>
+                                    <label class="field field--inline">
+                                        <input type="checkbox" id="eqEnabled">
+                                        <span class="field__label">Show circular equalizer</span>
                                     </label>
+                                    <label class="field">
+                                        <span class="field__label">Size</span>
+                                        <input class="field__range" id="eqSize" type="range" min="60" max="280" value="140" step="2">
+                                    </label>
+                                    <div class="field field--split">
+                                        <label class="field">
+                                            <span class="field__label">Color</span>
+                                            <input class="field__color" id="eqColor" type="color" value="#6cf0ff">
+                                        </label>
+                                        <label class="field">
+                                            <span class="field__label">Alpha</span>
+                                            <input class="field__range" id="eqAlpha" type="range" min="0" max="1" value="0.9" step="0.01">
+                                        </label>
+                                    </div>
                                 </div>
                                 <label class="field">
                                     <span class="field__label">Bass sensitivity</span>

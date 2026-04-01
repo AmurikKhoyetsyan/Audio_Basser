@@ -25,9 +25,7 @@
         sensitivityDefault: 1.6,
         smoothingDefault: 0.72,
 
-        // Animation tuning (CSS uses --pulse and --z; these influence how strong it looks)
-        pulseAmount: 0.085,
-        zDepthPx: 28,
+        // Animation tuning (CSS uses --pulse and --z)
         glowMax: 1.0,
     };
 
@@ -48,6 +46,16 @@
         var m = Math.floor(s / 60);
         var r = s % 60;
         return m + ":" + String(r).padStart(2, "0");
+    }
+
+    function hexToRgb(hex) {
+        var h = String(hex || "").replace("#", "");
+        if (h.length === 3) {
+            h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+        }
+        var n = parseInt(h, 16);
+        if (!isFinite(n) || h.length !== 6) return { r: 108, g: 240, b: 255 };
+        return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
     }
 
     // ============================================================
@@ -83,8 +91,17 @@
 
         gradColorA: $("gradColorA"),
         gradColorB: $("gradColorB"),
+        gradAlphaA: $("gradAlphaA"),
+        gradAlphaB: $("gradAlphaB"),
         gradAngle: $("gradAngle"),
         gradIntensity: $("gradIntensity"),
+        gradientEnabled: $("gradientEnabled"),
+
+        eqEnabled: $("eqEnabled"),
+        eqSize: $("eqSize"),
+        eqColor: $("eqColor"),
+        eqAlpha: $("eqAlpha"),
+        eqCanvas: $("eqCanvas"),
 
         visual: $("visual"),
         visualImage: $("visualImage"),
@@ -153,10 +170,9 @@
         if (analyser) analyser.smoothingTimeConstant = v;
     }
 
-    function getBassEnergy(dt) {
+    /** Call after getByteFrequencyData(freq). Updates envelopes; returns slow bass energy 0..1 */
+    function computeBassFromFreq(dt) {
         if (!analyser || !freq || !ctx) return 0;
-
-        analyser.getByteFrequencyData(freq);
 
         var nyquist = ctx.sampleRate / 2;
         var binHz = nyquist / freq.length;
@@ -164,7 +180,6 @@
         var i0 = clamp(Math.floor(VIS.bassMinHz / binHz), 0, freq.length - 1);
         var i1 = clamp(Math.ceil(VIS.bassMaxHz / binHz), i0 + 1, freq.length);
 
-        // Avg + Peak inside bass band for more obvious bass response.
         var sum = 0;
         var peak = 0;
         for (var i = i0; i < i1; i++) {
@@ -172,24 +187,34 @@
             sum += v;
             if (v > peak) peak = v;
         }
-        var avg = sum / Math.max(1, i1 - i0); // 0..255
-        var x = (avg * 0.72 + peak * 0.28) / 255; // 0..1
+        var avg = sum / Math.max(1, i1 - i0);
+        var x = (avg * 0.72 + peak * 0.28) / 255;
 
         var sens = VIS.sensitivityDefault;
         if (els.sensitivityRange) sens = Number(els.sensitivityRange.value);
         x = clamp(x * sens, 0, 1.35);
 
-        // Curve: emphasize hits, reduce noise
-        var energy = clamp(Math.pow(x, 1.25), 0, 1);
+        var energy = clamp(Math.pow(x, 1.15), 0, 1);
 
-        // Envelope follower
         dt = clamp(dt || 1 / 60, 0.001, 0.2);
-        var fastT = 1 - Math.exp(-dt * 24);
-        var slowT = 1 - Math.exp(-dt * 5.2);
+        var fastT = 1 - Math.exp(-dt * 28);
+        var slowT = 1 - Math.exp(-dt * 6.5);
         envFast = lerp(envFast, energy, fastT);
         envSlow = lerp(envSlow, energy, slowT);
 
         return envSlow;
+    }
+
+    function decayBassMotion(dt) {
+        dt = clamp(dt || 1 / 60, 0.001, 0.2);
+        envFast = lerp(envFast, 0, 1 - Math.exp(-dt * 14));
+        envSlow = lerp(envSlow, 0, 1 - Math.exp(-dt * 9));
+        var k = 32;
+        var damp = 0.82;
+        zVel += (0 - z) * k * dt;
+        zVel *= Math.pow(damp, dt * 60);
+        z += zVel * dt;
+        z = clamp(z, -1, 1);
     }
 
     function getTransient() {
@@ -207,6 +232,8 @@
     var z = 0;
     var zVel = 0;
 
+    var eqEnabled = false;
+
     function setCssVars(bass, pulse, zNorm, glow) {
         var root = document.documentElement.style;
         root.setProperty("--bass", bass.toFixed(4));
@@ -215,30 +242,123 @@
         root.setProperty("--glow", glow.toFixed(4));
     }
 
+    function syncEqCanvasSize() {
+        if (!els.eqCanvas || !els.visual) return;
+        var r = els.visual.getBoundingClientRect();
+        var w = Math.max(1, Math.floor(r.width));
+        var h = Math.max(1, Math.floor(r.height));
+        if (els.eqCanvas.width !== w || els.eqCanvas.height !== h) {
+            els.eqCanvas.width = w;
+            els.eqCanvas.height = h;
+        }
+    }
+
+    function drawCircularEQ() {
+        if (!els.eqCanvas || !freq || !analyser) return;
+        var c = els.eqCanvas;
+        var ctx2 = c.getContext("2d");
+        if (!ctx2) return;
+        var w = c.width;
+        var h = c.height;
+        var cx = w / 2;
+        var cy = h / 2;
+        var size = els.eqSize ? Number(els.eqSize.value) : 140;
+        var baseR = Math.min(w, h) * 0.18 * (size / 140);
+        var maxBar = Math.min(w, h) * 0.22 * (size / 140);
+        var n = 72;
+        var rgb = hexToRgb(els.eqColor && els.eqColor.value ? els.eqColor.value : "#6cf0ff");
+        var alpha = els.eqAlpha ? clamp(Number(els.eqAlpha.value), 0, 1) : 0.9;
+
+        ctx2.clearRect(0, 0, w, h);
+        ctx2.lineCap = "round";
+        ctx2.lineWidth = Math.max(1.5, Math.min(w, h) / 220);
+
+        for (var i = 0; i < n; i++) {
+            var t0 = Math.pow(i / n, 1.2);
+            var t1 = Math.pow((i + 1) / n, 1.2);
+            var b0 = Math.floor(t0 * freq.length);
+            var b1 = Math.floor(t1 * freq.length);
+            var sum = 0;
+            var count = 0;
+            for (var j = b0; j <= b1 && j < freq.length; j++) {
+                sum += freq[j];
+                count++;
+            }
+            var v = count ? sum / count / 255 : 0;
+            v = Math.pow(v, 0.85);
+            var ang = (i / n) * Math.PI * 2 - Math.PI / 2;
+            var r0 = baseR;
+            var r1 = baseR + v * maxBar;
+            ctx2.strokeStyle = "rgba(" + rgb.r + "," + rgb.g + "," + rgb.b + "," + alpha + ")";
+            ctx2.beginPath();
+            ctx2.moveTo(cx + Math.cos(ang) * r0, cy + Math.sin(ang) * r0);
+            ctx2.lineTo(cx + Math.cos(ang) * r1, cy + Math.sin(ang) * r1);
+            ctx2.stroke();
+        }
+    }
+
     function tick(ts) {
-        raf = requestAnimationFrame(tick);
         var dt = lastTs ? (ts - lastTs) / 1000 : 1 / 60;
         lastTs = ts;
+        dt = clamp(dt, 0.001, 0.2);
 
-        var playing = !els.audio.paused && !els.audio.ended;
-        var bass = playing ? getBassEnergy(dt) : 0;
-        var transient = playing ? getTransient() : 0;
+        var playing = els.audio && !els.audio.paused && !els.audio.ended;
+        var needSpectrum = analyser && freq && (playing || eqEnabled);
 
-        // forward/back: impulse on transients, then spring back
-        var impulse = transient * 1.2;
-        zVel += impulse * 9.2;
+        if (needSpectrum) {
+            analyser.getByteFrequencyData(freq);
+        }
 
-        var k = 28;
-        var damp = 0.84;
-        zVel += (0 - z) * k * dt;
-        zVel *= Math.pow(damp, dt * 60);
-        z += zVel * dt;
+        var bassMetric = 0;
+        var pulse = 0;
+        var glow = 0;
 
-        // pulse + glow
-        var pulse = clamp(Math.pow(bass, 0.82), 0, 1);
-        var glow = clamp(Math.pow(bass, 0.68) * VIS.glowMax, 0, 1);
+        if (playing && analyser && freq) {
+            bassMetric = computeBassFromFreq(dt);
+            var transient = getTransient();
+            var impulse = transient * 1.45;
+            zVel += impulse * 11;
+            var k = 30;
+            var damp = 0.83;
+            zVel += (0 - z) * k * dt;
+            zVel *= Math.pow(damp, dt * 60);
+            z += zVel * dt;
+            z = clamp(z, -1, 1);
+            pulse = clamp(Math.pow(bassMetric, 0.78), 0, 1);
+            glow = clamp(Math.pow(bassMetric, 0.62) * VIS.glowMax, 0, 1);
+        } else {
+            decayBassMotion(dt);
+            bassMetric = envSlow;
+            pulse = clamp(Math.pow(envSlow, 0.78), 0, 1);
+            glow = clamp(Math.pow(envSlow, 0.62) * VIS.glowMax, 0, 1);
+        }
 
-        setCssVars(bass, pulse, clamp(z, -1, 1), glow);
+        setCssVars(bassMetric, pulse, z, glow);
+
+        if (eqEnabled && els.eqCanvas) {
+            syncEqCanvasSize();
+            if (needSpectrum) {
+                drawCircularEQ();
+            } else {
+                var ctx2 = els.eqCanvas.getContext("2d");
+                if (ctx2) ctx2.clearRect(0, 0, els.eqCanvas.width, els.eqCanvas.height);
+            }
+        }
+
+        var continueLoop =
+            playing ||
+            eqEnabled ||
+            Math.abs(z) > 0.004 ||
+            Math.abs(zVel) > 0.004 ||
+            envSlow > 0.004 ||
+            envFast > 0.004;
+
+        if (continueLoop) {
+            raf = requestAnimationFrame(tick);
+        } else {
+            raf = 0;
+            lastTs = 0;
+        }
     }
 
     function startTick() {
@@ -248,24 +368,7 @@
     }
 
     function stopTickSmooth() {
-        if (!raf) return;
-        var settleMs = 420;
-        var start = performance.now();
-
-        function settle() {
-            var t = clamp((performance.now() - start) / settleMs, 0, 1);
-            z = lerp(z, 0, t);
-            zVel = lerp(zVel, 0, t);
-            setCssVars(0, 0, z, 0);
-            if (t < 1) requestAnimationFrame(settle);
-            else {
-                cancelAnimationFrame(raf);
-                raf = 0;
-                lastTs = 0;
-            }
-        }
-
-        requestAnimationFrame(settle);
+        startTick();
     }
 
     // ============================================================
@@ -370,10 +473,27 @@
 
     function setGradientVars() {
         var root = document.documentElement.style;
-        if (els.gradColorA && els.gradColorA.value) root.setProperty("--gradA", els.gradColorA.value);
-        if (els.gradColorB && els.gradColorB.value) root.setProperty("--gradB", els.gradColorB.value);
+        var ra = hexToRgb(els.gradColorA && els.gradColorA.value);
+        var rb = hexToRgb(els.gradColorB && els.gradColorB.value);
+        var blend = els.gradIntensity ? Number(els.gradIntensity.value) : 1;
+        blend = clamp(blend, 0, 1);
+        var aA = clamp((els.gradAlphaA ? Number(els.gradAlphaA.value) : 1) * blend, 0, 1);
+        var aB = clamp((els.gradAlphaB ? Number(els.gradAlphaB.value) : 1) * blend, 0, 1);
+        root.setProperty("--gradA-rgba", "rgba(" + ra.r + "," + ra.g + "," + ra.b + "," + aA + ")");
+        root.setProperty("--gradB-rgba", "rgba(" + rb.r + "," + rb.g + "," + rb.b + "," + aB + ")");
         if (els.gradAngle) root.setProperty("--gradAngle", String(Number(els.gradAngle.value) || 0) + "deg");
-        if (els.gradIntensity) root.setProperty("--gradIntensity", String(clamp(Number(els.gradIntensity.value), 0, 1)));
+        root.setProperty("--glow-a", "rgba(" + ra.r + "," + ra.g + "," + ra.b + ",0.35)");
+        root.setProperty("--glow-b", "rgba(" + rb.r + "," + rb.g + "," + rb.b + ",0.28)");
+        if (els.visual && els.gradientEnabled) {
+            els.visual.classList.toggle("visual--gradient-off", !els.gradientEnabled.checked);
+        }
+    }
+
+    function syncEqMode() {
+        eqEnabled = !!(els.eqEnabled && els.eqEnabled.checked);
+        if (els.visual) els.visual.classList.toggle("visual--eq-on", eqEnabled);
+        if (eqEnabled && els.audio && els.audio.src) resumeAudioContext();
+        if (eqEnabled) startTick();
     }
 
     // ============================================================
@@ -418,8 +538,15 @@
 
     if (els.gradColorA) els.gradColorA.addEventListener("input", setGradientVars);
     if (els.gradColorB) els.gradColorB.addEventListener("input", setGradientVars);
+    if (els.gradAlphaA) els.gradAlphaA.addEventListener("input", setGradientVars);
+    if (els.gradAlphaB) els.gradAlphaB.addEventListener("input", setGradientVars);
     if (els.gradAngle) els.gradAngle.addEventListener("input", setGradientVars);
     if (els.gradIntensity) els.gradIntensity.addEventListener("input", setGradientVars);
+    if (els.gradientEnabled) els.gradientEnabled.addEventListener("change", setGradientVars);
+    if (els.eqEnabled) els.eqEnabled.addEventListener("change", syncEqMode);
+    if (els.eqSize) els.eqSize.addEventListener("input", function () {
+        if (eqEnabled && els.eqCanvas) syncEqCanvasSize();
+    });
 
     function togglePlayPause() {
         if (!els.audio.src) return;
@@ -568,6 +695,7 @@
     setPlayUI(false);
     setCssVars(0, 0, 0, 0);
     setGradientVars();
+    syncEqMode();
     applyImageFit();
     syncImageEmptyState();
     syncFullscreenUI();
